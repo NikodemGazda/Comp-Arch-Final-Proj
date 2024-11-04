@@ -7,41 +7,108 @@ module cache_top #(
     input  logic clk, rst, we, re,
     input  logic [$clog2(RAM_DEPTH)-1:0] addr,
     input  logic [WIDTH-1:0] data_in,
+    input  logic [WIDTH-1:0] RAM_data_in,
+    output logic [WIDTH-1:0] RAM_data_out,
+    output logic [$clog2(RAM_DEPTH)-1:0] RAM_addr,
+    output logic done, RAM_we,
     output logic [WIDTH-1:0] data_out
 );
 
-// get signals
-logic [$clog2(WAYS)-1:0] way; // selects which way we want
+
+// *******************************************
+// **********   Register uP Inputs   *********
+// *******************************************
+
+
+logic we_r, re_r;
+logic [$clog2(RAM_DEPTH)-1:0] addr_r;
+logic [WIDTH-1:0] data_in_r;
+
+always_ff @(posedge clk or posedge rst) begin
+    if (rst) begin
+        we_r <= '0;
+        re_r <= '0;
+        addr_r <= '0;
+        data_in_r <= '0;
+    end else begin
+        we_r <= we;
+        re_r <= re;
+        addr_r <= addr;
+        data_in_r <= data_in;
+    end
+end
+
+
+// *******************************************
+// **********       RAM Ports        *********
+// *******************************************
+
+
+// Controlled in cache control block:
+//  - RAM_data_in
+//  - RAM_we
+
+assign RAM_addr = addr_r; // send uP address to RAM as well
+assign RAM_data_out = data_in_r; // send uP data to RAM as well
+
+
+// ********************************************
+// ******   Declaring/Assigning Signals   *****
+// ********************************************
+
+// signal for hit/miss logic
+logic hit;
+
+// signal for index
 logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index; // index size should be TOTAL_SIZE/WAYS
+
+// signals for tag storage
+logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] target_tag; // tag size should be RAM_DEPTH - index size
+logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] tags [0:WAYS-1]; // array of tags output from tag storage
+
+// signals for valid storage
+logic valid_bit [0:WAYS-1]; // valid bit
+logic valid_bits [0:WAYS-1]; // valid bits for all ways
+
+// signals for way selection
+logic [$clog2(WAYS)-1:0] chosen_way; // selects which way we want
 logic [$clog2(WAYS)-1:0] replace_way; // way to replace in case of a cache miss
 
-// assign index and tag from address
-assign index = addr[$clog2(TOTAL_SIZE/WAYS)-1:0];
-assign tag = addr[$clog2(RAM_DEPTH)-1:$clog2(TOTAL_SIZE/WAYS)];
+// signals for data storage
+logic [WIDTH-1:0] cache_data_out; // data output from cache
+logic [WIDTH-1:0] cache_data_in; // data to be written to cache
+logic cache_we; // cache write enable
+
+// assign index and tag from uP address
+assign index = addr_r[$clog2(TOTAL_SIZE/WAYS)-1:0];
+assign target_tag = addr_r[$clog2(RAM_DEPTH)-1:$clog2(TOTAL_SIZE/WAYS)];
+
+// sanity check:
 
 // ram size == 256 which is 8 bits
-// cache size is 16, but since we have 4 ways, it's index is only 4 entries == 2 bits
-// which would make tag size 6 bits?
+// cache size is 16, but since we have 4 ways, its index is only 4 entries == 2 bits
+// which would make tag size 6 bits:
+// 
 //    address    |    tag    | index
-//  0b0000 0000  | 0b0000 00 | 0b00
-//  0b0000 0001  | 0b0000 00 | 0b01
-//  0b0000 0010  | 0b0000 00 | 0b10
-//  0b0000 0011  | 0b0000 00 | 0b11
-//  0b0000 0100  | 0b0000 01 | 0b00
+//  0b0000 0000  | 0b0000 00 | 0b00    --
+//  0b0000 0001  | 0b0000 00 | 0b01       \
+//  0b0000 0010  | 0b0000 00 | 0b10         --> these two go into the same index
+//  0b0000 0011  | 0b0000 00 | 0b11       /
+//  0b0000 0100  | 0b0000 01 | 0b00    --
+
+
+// ********************************************
+// *******     Entity Instantiations     ******
+// ********************************************
 
 /* 
     Cache Data
     - is the physical storage for data within the cache
     - organized into multiple ways
     - index used as cache address, total size = number of ways * index size
-
-    ********* EDIT SO EACH WAY DATA IS OUTPUT IN PARALLEL *********
+    - combinational/instant reads, sequential/instant writes
 */
-// signals for data storage
-logic [WIDTH-1:0] data; // tag size should be RAM_DEPTH - index size
-logic [WIDTH-1:0] datas [0:WAYS-1]; // tag size should be RAM_DEPTH - index size
 
-// cache data block
 cache_data #(
     .WIDTH(WIDTH),
     .WAYS(WAYS),
@@ -49,24 +116,19 @@ cache_data #(
 ) cache_data_inst (
     .clk(clk),
     .rst(rst),
-    .we(we),
-    .re(re),
-    .way(way),
+    .we(cache_we),
+    .way(chosen_way),
     .index(index),
-    .data_in(data_in),
-    .data_out(datas)
+    .data_in(cache_data_in),
+    .data_out(cache_data_out)
 );
 
 /* 
     Cache Tag
     - holds the cache tags for each index and way
-    ********* EDIT SO EACH WAY TAG IS OUTPUT IN PARALLEL *********
+    - combinational/instant reads, sequential/instant writes
 */
-// signals for tag storage
-logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] tag; // tag size should be RAM_DEPTH - index size
-logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] tags [0:WAYS-1]; // array of tags output from tag storage
 
-// cache tag block
 cache_tag #(
     .WIDTH($clog2(RAM_DEPTH)),
     .WAYS(WAYS),
@@ -74,62 +136,96 @@ cache_tag #(
 ) cache_tag_inst (
     .clk(clk),
     .rst(rst),
-    .we(we),
-    .re(re),
-    .way(way),
+    .we(cache_we),
+    .way(chosen_way),
     .index(index),
-    .tag_in(tag),
+    .tag_in(target_tag),
     .tag_out(tags)
 );
 
 /* 
     Cache Valid
     - holds the valid bit in the cache for each index and way
-    ********* EDIT SO EACH WAY VALID BIT IS OUTPUT IN PARALLEL *********
+    - combinational/instant reads, sequential/instant writes
 */
-// signals for valid storage
-logic valid_bit [0:WAYS-1]; // valid bit
-logic valid_bits [0:WAYS-1]; // valid bits for all ways
 
-// valid bit block
 cache_valid #(
     .WAYS(WAYS),
     .TOTAL_SIZE(TOTAL_SIZE)
 ) cache_valid_inst (
     .clk(clk),
     .rst(rst),
-    .we(we),
-    .way(way),
+    .we(cache_we),
+    .way(chosen_way),
     .index(index),
-    .valid_out(valid_out)
+    .valid_out(valid_bits)
 );
 
 /* 
-    Way Selection Logic
+    Hit/miss Logic
     - determines which way to use for a given address
-    - determines if the requested data is in the cache
-
-    // so first determine whether hit or miss using valid bits and tags (diagram logic)
-    // if hit, then we can use the way to access the data
-    // if miss, use LRU to determine which way to replace
+    - determines if the requested data is in the cache (hit/miss)
 */
+
+cache_hit #(
+    .WAYS(WAYS),
+    .TOTAL_SIZE(TOTAL_SIZE),
+    .RAM_DEPTH(RAM_DEPTH),
+    .WIDTH(WIDTH)
+) cache_hit_inst (
+    .clk(clk),
+    .rst(rst),
+    .target_tag(target_tag),
+    .tags(tags),
+    .valid_bits(valid_bits),
+    .lru_way(replace_way),
+    .hit(hit),
+    .chosen_way(chosen_way)
+);
 
 /* 
     LRU Replacement Strategy Buffer
     - leastt recently used way output is combinational
     - each read/write cycle updates LRU buffer
+    - updates to buffer are sequential
 */
-lru_buffer #( 
+cache_lru #( 
     .WAYS(WAYS),
     .TOTAL_SIZE(TOTAL_SIZE)
 ) lru_buffer_inst (
     .clk(clk),
     .rst(rst),
-    .re(re),
-    .we(we),
-    .way(way),
+    .re(re_r),
+    .we(we_r),
+    .way(chosen_way),
     .index(index),
     .replace_way(replace_way)
+);
+
+/* 
+    Cache Control Block
+    - Handles all the miscellaneous control signals and logic in the cache
+    - Includes done logic, we logic, and cache data logic, and data output logic (which is registered)
+*/
+
+cache_control #(
+    .WAYS(WAYS),
+    .TOTAL_SIZE(TOTAL_SIZE),
+    .WIDTH(WIDTH)
+) cache_control_inst (
+    .clk(clk),
+    .rst(rst),
+    .we(we_r),
+    .re(re_r),
+    .hit(hit),
+    .data_in(data_in_r),
+    .data_from_RAM(RAM_data_in),
+    .data_from_cache(cache_data_out),
+    .done(done),
+    .cache_we(cache_we),
+    .RAM_we(RAM_we),
+    .cache_data_in(cache_data_in),
+    .data_out(data_out)
 );
 
 endmodule

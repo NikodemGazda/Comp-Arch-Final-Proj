@@ -3,11 +3,11 @@ module cache_data #(
     parameter WAYS=4,
     parameter TOTAL_SIZE=16
     ) (
-    input  logic clk, rst, we, re,
+    input  logic clk, rst, we,
     input  logic [$clog2(WAYS)-1:0] way,
     input  logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index,
     input  logic [WIDTH-1:0] data_in,
-    output logic [WIDTH-1:0] data_out [0:WAYS-1] // output data for all ways
+    output logic [WIDTH-1:0] data_out
 );
     // memory array acting as memory
     logic [WIDTH-1:0] mem [0:WAYS-1][0:TOTAL_SIZE/WAYS-1];
@@ -21,17 +21,13 @@ module cache_data #(
                     mem[i][j] <= '0;
                 end
             end
-        end else begin
-            // write on we, read on re
-            if (we) begin
-                mem[way][index] <= data_in;
-            end else if (re) begin
-                data_out <= mem[way][index];
-            end
+        end else if (we) begin
+            // write on we
+            mem[way][index] <= data_in;
         end
     end
 
-    // make reads combinational
-    assign data_out = mem[index]; // output data for all ways
+    // reads are combinational
+    assign data_out = mem[way][index];
 
 endmodule

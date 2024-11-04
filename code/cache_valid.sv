@@ -28,6 +28,7 @@ module cache_valid #(
         end
     end
 
+    // reads are combinational
     assign valid_out = valid_bits[way]; // output valid bits for all ways
 
 endmodule

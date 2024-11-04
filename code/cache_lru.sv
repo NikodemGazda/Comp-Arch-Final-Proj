@@ -1,4 +1,4 @@
-module lru_buffer #(
+module cache_lru #(
     parameter WAYS = 4,
     parameter TOTAL_SIZE = 16
 ) (

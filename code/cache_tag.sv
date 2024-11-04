@@ -38,7 +38,7 @@ module cache_tag #(
         end
     end
 
-    // potentially make reads combinational
+    // reads combinational
     assign tag_out = tags[way]; // output tags for all ways
 
 endmodule
