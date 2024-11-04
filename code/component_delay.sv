@@ -1,6 +1,8 @@
+`include "component_register.sv"
+
 module component_delay #(
     parameter WIDTH = 8,
-    parameter CYCLES = 4,
+    parameter CYCLES = 4
 ) (
     input logic clk, rst,
     input logic [WIDTH-1:0] data_in,

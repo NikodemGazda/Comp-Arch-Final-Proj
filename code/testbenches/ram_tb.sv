@@ -1,4 +1,4 @@
-class transaction #(parameter WIDTH = 8, parameter DEPTH = 256); ;
+class ram_transaction #(parameter WIDTH = 8, parameter DEPTH = 256); ;
 
     // signals
     rand logic [WIDTH-1:0] data_in;
@@ -107,8 +107,8 @@ module ram_tb;
         end
     endtask
 
-    // create transaction object
-    transaction #(.WIDTH(WIDTH), .DEPTH(DEPTH)) item;
+    // create ram_transaction object
+    ram_transaction #(.WIDTH(WIDTH), .DEPTH(DEPTH)) item;
 
     // track failures
     int failures = 0;
@@ -136,7 +136,7 @@ module ram_tb;
         // print first couple of tests
         $display("Displaying first 5 of %d random tests...", NUM_TESTS);
 
-        // create transaction object
+        // create ram_transaction object
         item = new();
 
         // start tests

@@ -1,6 +1,6 @@
-`include "component_register.sv"
+`include "component_delay.sv"
 
-class register_transaction #(parameter WIDTH = 8); ;
+class delay_transaction #(parameter WIDTH = 8, parameter CYCLES = 4);
 
     // signals
     rand logic [WIDTH-1:0] data_in;
@@ -12,12 +12,13 @@ class register_transaction #(parameter WIDTH = 8); ;
 
 endclass
 
-module register_tb;
+module delay_tb;
 
     // constants
     localparam int DIRECTED_TESTS = 1; // determine whether to run directed tests
     localparam int NUM_TESTS = 1000;
     localparam int WIDTH = 8;
+    localparam int CYCLES = 4;
 
     // signals
     logic clk, rst;
@@ -25,7 +26,7 @@ module register_tb;
     logic [WIDTH-1:0] data_out;
 
     // instantiate DUT
-    component_register #(.WIDTH(WIDTH)) DUT (.*);
+    component_delay #(.WIDTH(WIDTH), .CYCLES(CYCLES)) DUT (.*);
 
     // generate clock
     initial begin : clk_gen
@@ -65,7 +66,7 @@ module register_tb;
     endtask
 
     // create register_transaction object
-    register_transaction #(.WIDTH(WIDTH)) item;
+    delay_transaction #(.WIDTH(WIDTH), .CYCLES(CYCLES)) item;
 
     // track failures
     int failures = 0;
@@ -74,7 +75,7 @@ module register_tb;
     initial begin : drive_inputs
 
         // display that ram tb starting
-        $display("Starting component_register testbench...");
+        $display("Starting component_delay testbench...");
 
         // reset DUT
         $display("Resetting DUT...");
@@ -122,15 +123,34 @@ module register_tb;
     end
 
     // ASSERTS!!!!!!!!! to check functionality
+    // get a counter to wait for CYCLES cycles after reset
+    int counter = 0;
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            counter <= 0;
+        end else if (counter < CYCLES-1) begin
+            counter <= counter + 1;
+        end
+    end
 
-    // check register outputs are valid
+    // check delay outputs are valid
     property out_correct_check;
-        @(posedge clk) disable iff (rst) data_out == $past(data_in);
+        @(posedge clk) disable iff (rst || counter < CYCLES-1) data_out == $past(data_in, CYCLES);
+    endproperty
+
+    // check that outputs are zero after reset
+    property out_zero_check;
+        @(posedge clk) disable iff (counter == CYCLES-1) data_out == 0;
     endproperty
 
     // calling assert properties
     assert property (out_correct_check) else begin
-        $display("ERROR with out_correct_check: out=%d but supposed to be %d", data_out, $past(data_in));
+        $display("ERROR with out_correct_check: out=%d but supposed to be %d", data_out, $past(data_in, CYCLES));
+        failures++;
+    end
+
+    assert property (out_zero_check) else begin
+        $display("ERROR with out_zero_check: out=%d and counter=%d but out supposed to be %d", data_out, counter, '0);
         failures++;
     end
 
