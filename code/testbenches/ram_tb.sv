@@ -1,4 +1,4 @@
-class ram_transaction #(parameter WIDTH = 8, parameter DEPTH = 256); ;
+class ram_transaction #(parameter WIDTH = 8, parameter DEPTH = 256);
 
     // signals
     rand logic [WIDTH-1:0] data_in;

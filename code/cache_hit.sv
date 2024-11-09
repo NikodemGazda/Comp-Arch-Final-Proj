@@ -4,11 +4,10 @@ module cache_hit #(
     parameter RAM_DEPTH = 256,
     parameter WIDTH = 8
 ) (
-    input logic clk, rst,
-    input logic [$clog2(RAM_DEPTH)-1:$clog2(TOTAL_SIZE/WAYS)] target_tag,
-    input logic [$clog2(RAM_DEPTH)-1:$clog2(TOTAL_SIZE/WAYS)] tags [0:WAYS-1],
-    input logic valid_bits [0:WAYS-1],
-    input logic [$clog2(WAYS)-1:0] lru_way,
+    input  logic [$clog2(RAM_DEPTH)-1-$clog2(TOTAL_SIZE/WAYS):0] target_tag,
+    input  logic [$clog2(RAM_DEPTH)-1-$clog2(TOTAL_SIZE/WAYS):0] tags [0:WAYS-1],
+    input  logic valid_bits [0:WAYS-1],
+    input  logic [$clog2(WAYS)-1:0] lru_way,
     output logic hit,
     output logic [$clog2(WAYS)-1:0] chosen_way
 );

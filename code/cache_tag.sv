@@ -8,7 +8,6 @@ module cache_tag #(
     input  logic clk,
     input  logic rst,
     input  logic we,
-    // input  logic re,
     input  logic [$clog2(WAYS)-1:0] way,
     input  logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index,
     input  logic [WIDTH-1:0] tag_in,
@@ -30,7 +29,6 @@ module cache_tag #(
             if (we) begin
                 tags[way][index] <= tag_in; // write tag for the specified way and index
             end
-            // if (re) begin
             //     for (int i = 0; i < WAYS-1; i++) begin
             //         tag_out[i] <= tags[i][index]; // read tag for all ways at the specified index
             //     end
@@ -39,6 +37,10 @@ module cache_tag #(
     end
 
     // reads combinational
-    assign tag_out = tags[way]; // output tags for all ways
+    always_comb begin
+        for(int i = 0; i < WAYS; i++) begin
+            tag_out[i] = tags[i][index]; // output tags for all ways
+        end
+    end
 
 endmodule

@@ -173,8 +173,6 @@ cache_hit #(
     .RAM_DEPTH(RAM_DEPTH),
     .WIDTH(WIDTH)
 ) cache_hit_inst (
-    .clk(clk),
-    .rst(rst),
     .target_tag(target_tag),
     .tags(tags),
     .valid_bits(valid_bits),

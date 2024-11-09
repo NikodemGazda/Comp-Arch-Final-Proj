@@ -29,6 +29,10 @@ module cache_valid #(
     end
 
     // reads are combinational
-    assign valid_out = valid_bits[way]; // output valid bits for all ways
+    always_comb begin
+        for(int i = 0; i < WAYS; i++) begin
+            valid_out[i] = valid_bits[i][index]; // output valid bits for all ways
+        end
+    end
 
 endmodule
