@@ -208,7 +208,6 @@ cache_lru #(
 
 cache_control #(
     .WAYS(WAYS),
-    .TOTAL_SIZE(TOTAL_SIZE),
     .WIDTH(WIDTH)
 ) cache_control_inst (
     .clk(clk),
@@ -221,9 +220,10 @@ cache_control #(
     .data_from_cache(cache_data_out),
     .done(done),
     .cache_we(cache_we),
-    .RAM_we(RAM_we),
     .cache_data_in(cache_data_in),
     .data_out(data_out)
 );
+
+assign RAM_we = we_r;
 
 endmodule

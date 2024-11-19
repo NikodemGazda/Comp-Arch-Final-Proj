@@ -12,22 +12,32 @@ module cache_lru #(
     // each index has its own LRU buffer
     // leftmost entry is the last used, rightmost is most recently used
     // each slot keeps track of the way currently in it
-    logic [$clog2(WAYS)-1:0] last_used [$clog2(WAYS)-1:0][0:$clog2(TOTAL_SIZE/WAYS)-1];
+    logic [$clog2(WAYS)-1:0] last_used [0:WAYS][0:(TOTAL_SIZE/WAYS)-1];
+    logic [$clog2(WAYS)-1:0] replace_way_r;
 
     // signal to store the address of the way we're currently using in the LRU buffer
     logic [$clog2(WAYS)-1:0] current_way_addr;
 
     // finding the address of the way to replace
     always_comb begin
+        current_way_addr = 0;
         for (int i = 0; i < WAYS; i++) begin
             if (last_used[i][index] == way) begin
-                current_way_addr = last_used[i][index];
+                current_way_addr = i;
             end
         end
     end
 
     // last used way is always the first entry
     assign replace_way = last_used[0][index];
+    // assign replace_way = replace_way_r;
+    // always_ff @(posedge clk or posedge rst) begin
+    //     if (rst) begin
+    //         replace_way_r <= 0;
+    //     end else begin
+    //         replace_way_r <= last_used[0][index];
+    //     end
+    // end
 
     /* UPDATE LAST USED SLOT */
     // on every re/we cycle, we update the last used slots
@@ -41,10 +51,14 @@ module cache_lru #(
                     last_used[i][j] <= i;
                 end
             end
-        end else (re or we) begin
+        end else if (re | we) begin
             // the slots before the slot for the current way shouldn't shift
-            for (int i = current_way_addr; i < WAYS-1; i++) begin
-                last_used[i][index] <= last_used[i+1][index];
+            for (int i = 0; i < WAYS-1; i++) begin
+                // need to have this if condition because can't set
+                // i = current_way_addr at compile time
+                if (i >= current_way_addr) begin
+                    last_used[i][index] <= last_used[i+1][index];
+                end
             end
             // put the current way in the last slot
             last_used[WAYS-1][index] <= last_used[current_way_addr][index];
