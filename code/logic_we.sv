@@ -12,6 +12,7 @@ module logic_we (
     ) internal_we_reg (
         .clk(clk),
         .rst(rst),
+        .en(1'b1),
         .data_in(re & ~hit),
         .data_out(internal_we)
     );

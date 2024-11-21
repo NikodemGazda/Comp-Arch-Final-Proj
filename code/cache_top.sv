@@ -19,18 +19,22 @@ module cache_top #(
 // **********   Register uP Inputs   *********
 // *******************************************
 
-
+logic new_operation;
 logic we_r, re_r;
 logic [$clog2(RAM_DEPTH)-1:0] addr_r;
 logic [WIDTH-1:0] data_in_r;
 
+// we consider a new operation to be when either re or we are high
+assign new_operation = re | we;
+
+// register uP inputs when a new operation is detected
 always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
         we_r <= '0;
         re_r <= '0;
         addr_r <= '0;
         data_in_r <= '0;
-    end else begin
+    end else if (new_operation) begin
         we_r <= we;
         re_r <= re;
         addr_r <= addr;

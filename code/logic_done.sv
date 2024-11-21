@@ -1,4 +1,6 @@
-module logic_done (
+module logic_done #(
+    parameter MIN_CYCLES = 2
+) (
     input logic clk, rst, we, re, hit,
     output logic done
 );
@@ -14,18 +16,19 @@ module logic_done (
     ) reset_reg_read_hit (
         .clk(clk),
         .rst(rst),
+        .en(1'b1),
         .data_in(read_hit_delay_out),
         .data_out(reset_reg_read_hit_signal)
     );
     
     component_delay #(
-        .WIDTH(WIDTH),
-        .CYCLES(2)
+        .WIDTH(1),
+        .CYCLES(MIN_CYCLES)
     ) read_hit_delay (
         .clk(clk),
         .rst(rst | reset_reg_read_hit_signal),
-        .in(re & hit),
-        .out(read_hit_delay_out)
+        .data_in(re & hit),
+        .data_out(read_hit_delay_out)
     );
 
     // read miss
@@ -37,18 +40,19 @@ module logic_done (
     ) reset_reg_read_miss (
         .clk(clk),
         .rst(rst),
+        .en(1'b1),
         .data_in(read_miss_delay_out),
         .data_out(reset_reg_read_miss_signal)
-    )
+    );
 
     component_delay #(
-        .WIDTH(WIDTH),
-        .CYCLES(3)
+        .WIDTH(1),
+        .CYCLES(MIN_CYCLES + 1)
     ) read_miss_delay (
         .clk(clk),
         .rst(rst | reset_reg_read_miss_signal),
-        .in(re & ~hit),
-        .out(read_miss_delay_out)
+        .data_in(re & ~hit),
+        .data_out(read_miss_delay_out)
     );
 
     // write hit
@@ -60,18 +64,19 @@ module logic_done (
     ) reset_reg_write_hit (
         .clk(clk),
         .rst(rst),
+        .en(1'b1),
         .data_in(write_hit_delay_out),
         .data_out(reset_reg_write_hit_signal)
     );
 
     component_delay #(
-        .WIDTH(WIDTH),
-        .CYCLES(2)
+        .WIDTH(1),
+        .CYCLES(MIN_CYCLES)
     ) write_hit_delay (
         .clk(clk),
         .rst(rst | reset_reg_write_hit_signal),
-        .in(we & hit),
-        .out(write_hit_delay_out)
+        .data_in(we & hit),
+        .data_out(write_hit_delay_out)
     );
 
     // write miss
@@ -83,18 +88,19 @@ module logic_done (
     ) reset_reg_write_miss (
         .clk(clk),
         .rst(rst),
+        .en(1'b1),
         .data_in(write_miss_delay_out),
         .data_out(reset_reg_write_miss_signal)
     );
 
     component_delay #(
-        .WIDTH(WIDTH),
-        .CYCLES(3)
-    ) write_hit_delay (
+        .WIDTH(1),
+        .CYCLES(MIN_CYCLES + 1)
+    ) write_miss_delay (
         .clk(clk),
         .rst(rst | reset_reg_write_miss_signal),
-        .in(we & ~hit),
-        .out(write_miss_delay_out)
+        .data_in(we & ~hit),
+        .data_out(write_miss_delay_out)
     );
 
     // or-ing all the done delay outputs

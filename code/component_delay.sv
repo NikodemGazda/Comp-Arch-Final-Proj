@@ -1,4 +1,4 @@
-`include "component_register.sv"
+// `include "component_register.sv"
 
 module component_delay #(
     parameter WIDTH = 8,
@@ -11,20 +11,28 @@ module component_delay #(
     // array of registers to hold data
     logic [WIDTH-1:0] mem [0:CYCLES];
 
-    // array of registers
-    for (genvar i = 0; i < CYCLES; i++) begin : reg_array
-        component_register #(
-            .WIDTH(WIDTH)
-        ) reg_array (
-            .clk(clk),
-            .rst(rst),
-            .data_in(mem[i]),
-            .data_out(mem[i+1])
-        );
-    end
+    // if generate just in case CYCLES is 0
+    generate
+        if (CYCLES == 0) begin
+            assign data_out = data_in;
+        end else begin
+            // array of registers
+            for (genvar i = 0; i < CYCLES; i++) begin : reg_array
+                component_register #(
+                    .WIDTH(WIDTH)
+                ) reg_array (
+                    .clk(clk),
+                    .rst(rst),
+                    .en(1'b1),
+                    .data_in(mem[i]),
+                    .data_out(mem[i+1])
+                );
+            end
 
-    // assign input/output
-    assign data_out = mem[CYCLES];
-    assign mem[0] = data_in;
+            // assign input/output
+            assign data_out = mem[CYCLES];
+            assign mem[0] = data_in;
+        end
+    endgenerate
 
 endmodule
