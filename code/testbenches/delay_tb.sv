@@ -24,6 +24,7 @@ module delay_tb;
     logic clk, rst;
     logic [WIDTH-1:0] data_in;
     logic [WIDTH-1:0] data_out;
+    logic [WIDTH-1:0] data_all_out [0:CYCLES];
 
     // instantiate DUT
     component_delay #(.WIDTH(WIDTH), .CYCLES(CYCLES)) DUT (.*);
@@ -60,7 +61,9 @@ module delay_tb;
 
             // print first 5 writes
             if (i < 5) begin
-                $display("Writing %d", data_in);
+                $display("Wrote %d", data_in);
+                $display("data_out: %d", data_out);
+                $display("data_all_out: %d", data_all_out[0], data_all_out[1], data_all_out[2], data_all_out[3], data_all_out[4]);
             end
         end
     endtask
@@ -114,6 +117,11 @@ module delay_tb;
             @(posedge clk);
             @(negedge clk);
 
+            // display outputs
+            if (i < 5) begin
+                $display("data_out: %d", data_out);
+                $display("data_all_out: %d", data_all_out[0], data_all_out[1], data_all_out[2], data_all_out[3], data_all_out[4]);
+            end
         end
 
         // end tests

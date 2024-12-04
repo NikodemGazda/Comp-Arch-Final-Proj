@@ -1,3 +1,10 @@
+`include "cache_data.sv"
+`include "cache_tag.sv"
+`include "cache_valid.sv"
+`include "cache_hit.sv"
+`include "cache_lru.sv"
+`include "cache_control.sv"
+
 module cache_top #(
     parameter WIDTH=8,
     parameter WAYS=4,
@@ -10,7 +17,7 @@ module cache_top #(
     input  logic [WIDTH-1:0] RAM_data_in,
     output logic [WIDTH-1:0] RAM_data_out,
     output logic [$clog2(RAM_DEPTH)-1:0] RAM_addr,
-    output logic done, RAM_we,
+    output logic op_in_progress, done, RAM_we,
     output logic [WIDTH-1:0] data_out
 );
 
@@ -34,11 +41,19 @@ always_ff @(posedge clk or posedge rst) begin
         re_r <= '0;
         addr_r <= '0;
         data_in_r <= '0;
-    end else if (new_operation) begin
-        we_r <= we;
-        re_r <= re;
-        addr_r <= addr;
-        data_in_r <= data_in;
+    end else begin
+        if (new_operation) begin
+            we_r <= we;
+            re_r <= re;
+            addr_r <= addr;
+            data_in_r <= data_in;
+        // clear the registers once done hits
+        end else if (done) begin
+            we_r <= '0;
+            re_r <= '0;
+            addr_r <= '0;
+            data_in_r <= '0;
+        end
     end
 end
 
@@ -60,8 +75,9 @@ assign RAM_data_out = data_in_r; // send uP data to RAM as well
 // ******   Declaring/Assigning Signals   *****
 // ********************************************
 
-// signal for hit/miss logic
+// signal for hit/miss logic and pre_done logic
 logic hit;
+logic pre_done;
 
 // signal for index
 logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index; // index size should be TOTAL_SIZE/WAYS
@@ -194,11 +210,12 @@ cache_hit #(
 cache_lru #( 
     .WAYS(WAYS),
     .TOTAL_SIZE(TOTAL_SIZE)
-) lru_buffer_inst (
+) cache_lru_inst (
     .clk(clk),
     .rst(rst),
     .re(re_r),
     .we(we_r),
+    .update(pre_done),
     .way(chosen_way),
     .index(index),
     .replace_way(replace_way)
@@ -222,6 +239,8 @@ cache_control #(
     .data_in(data_in_r),
     .data_from_RAM(RAM_data_in),
     .data_from_cache(cache_data_out),
+    .op_in_progress(op_in_progress),
+    .pre_done(pre_done),
     .done(done),
     .cache_we(cache_we),
     .cache_data_in(cache_data_in),

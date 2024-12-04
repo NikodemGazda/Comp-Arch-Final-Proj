@@ -1,3 +1,6 @@
+`include "cache_top.sv"
+`include "ram.sv"
+
 module top_level #(
     parameter WIDTH=8,
     parameter WAYS=4,
@@ -7,9 +10,8 @@ module top_level #(
     input  logic clk, rst, we, re,
     input  logic [$clog2(RAM_DEPTH)-1:0] addr,
     input  logic [WIDTH-1:0] data_in,
-    output logic done,
-    output logic [WIDTH-1:0] data_out,
-
+    output logic done, op_in_progress,
+    output logic [WIDTH-1:0] data_out
 );
     // signals between cache and ram
     logic RAM_we;
@@ -29,12 +31,13 @@ module top_level #(
         .re(re),
         .addr(addr),
         .data_in(data_in),
+        .RAM_data_in(RAM_data_out), // these are swapped bc im silly
+        .RAM_data_out(RAM_data_in), // but it's meant to be like this
+        .RAM_addr(RAM_addr),
+        .op_in_progress(op_in_progress),
         .done(done),
-        .data_out(data_out),
         .RAM_we(RAM_we),
-        .RAM_data_in(RAM_data_in),
-        .RAM_data_out(RAM_data_out),
-        .RAM_addr(RAM_addr)
+        .data_out(data_out)
     );
 
     // instantiate ram

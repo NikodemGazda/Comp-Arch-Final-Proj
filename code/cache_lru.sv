@@ -2,7 +2,7 @@ module cache_lru #(
     parameter WAYS = 4,
     parameter TOTAL_SIZE = 16
 ) (
-    input logic clk, rst, re, we,
+    input logic clk, rst, re, we, update,
     input logic [$clog2(WAYS)-1:0] way,
     input logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index,
     output logic [$clog2(WAYS)-1:0] replace_way
@@ -40,9 +40,10 @@ module cache_lru #(
     // end
 
     /* UPDATE LAST USED SLOT */
-    // on every re/we cycle, we update the last used slots
+    // on every update, we update the last used slots
     // now that we know which of the slots has the way we want to use (current_way_addr),
     // we can put it in the most recently used way slot (at the end)
+
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             // reset with all slots incrementing from 0 to WAYS-1
@@ -51,7 +52,7 @@ module cache_lru #(
                     last_used[i][j] <= i;
                 end
             end
-        end else if (re | we) begin
+        end else if (update) begin
             // the slots before the slot for the current way shouldn't shift
             for (int i = 0; i < WAYS-1; i++) begin
                 // need to have this if condition because can't set

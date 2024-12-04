@@ -17,6 +17,7 @@ module ram #(
             for (int i = 0; i < DEPTH; i++) begin
                 mem[i] <= '0;
             end
+            data_out <= '0;
         end else begin
             // write on we
             if (we) begin

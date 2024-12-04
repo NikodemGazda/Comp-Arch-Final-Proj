@@ -9,10 +9,9 @@ module cache_control #(
     parameter WIDTH = 8
 ) (
     input logic clk, rst, we, re, hit,
-    input logic [$clog2(WAYS)-1:0] chosen_way,
     input logic [WIDTH-1:0] data_in, data_from_RAM,
-    input logic [WIDTH-1:0] data_from_cache [0:WAYS-1],
-    output logic done, cache_we,
+    input logic [WIDTH-1:0] data_from_cache,
+    output logic op_in_progress, pre_done, done, cache_we,
     output logic [WIDTH-1:0] cache_data_in,
     output logic [WIDTH-1:0] data_out
 );
@@ -36,20 +35,9 @@ module cache_control #(
         .we(we),
         .re(re),
         .hit(hit),
+        .op_in_progress(op_in_progress),
+        .pre_done(pre_done),
         .done(done)
-    );
-
-    // pre-done logic for cache data in
-    logic pre_done;
-    logic_done #(
-        .MIN_CYCLES(0)
-    ) cache_data_in_done (
-        .clk(clk),
-        .rst(rst),
-        .we(we),
-        .re(re),
-        .hit(hit),
-        .done(pre_done)
     );
 
     /************ cache data logic ************/
@@ -59,15 +47,15 @@ module cache_control #(
     /************ data output logic ************/
     logic [WIDTH-1:0] which_data;
 
-    // if we're not doing a read, send 0s
+    // if we're not doing a read, send 0s to data output
     // if we are doing a read, if it's a hit, send the data from the cache
     // if it's a miss, send the data from the RAM
     // and only output data when done
-    assign which_data = re ? (hit ? (data_from_cache[chosen_way]) : data_from_RAM) : '0;
+    assign which_data = re ? (hit ? (data_from_cache) : data_from_RAM) : '0;
 
     component_register #(
         .WIDTH(WIDTH)
-    ) data_out_reg_cycle_1 (
+    ) data_out_reg (
         .clk(clk),
         .rst(rst),
         .en(pre_done),

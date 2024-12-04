@@ -3,15 +3,16 @@
 module cache_tag #(
     parameter WIDTH = 8,
     parameter WAYS = 4,
-    parameter TOTAL_SIZE = 16
+    parameter TOTAL_SIZE = 16,
+    parameter RAM_DEPTH = 256
 ) (
     input  logic clk,
     input  logic rst,
     input  logic we,
     input  logic [$clog2(WAYS)-1:0] way,
     input  logic [$clog2(TOTAL_SIZE/WAYS)-1:0] index,
-    input  logic [WIDTH-1:0] tag_in,
-    output logic [WIDTH-1:0] tag_out [0:WAYS-1] // output tags for all ways
+    input  logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] tag_in,
+    output logic [$clog2(RAM_DEPTH)-$clog2(TOTAL_SIZE/WAYS)-1:0] tag_out [0:WAYS-1] // output tags for all ways
 );
 
     // valid bits for each way
