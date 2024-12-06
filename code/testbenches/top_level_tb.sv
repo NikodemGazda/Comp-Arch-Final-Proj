@@ -19,7 +19,7 @@ endclass
 module top_level_tb;
 
     // constants
-    localparam int NUM_DIRECTED_TESTS = 0;
+    localparam int NUM_DIRECTED_TESTS = 1;
     localparam int NUM_TESTS = 100;
     localparam int WIDTH = 8;
     localparam int WAYS = 4;
@@ -603,6 +603,16 @@ module top_level_tb;
             
             // update last addr
             last_addr <= addr;
+        end
+    end
+
+    // reset counter
+    logic [31:0] rst_counter;
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            rst_counter <= '0;
+        end else if (rst_counter < 5) begin
+            rst_counter <= rst_counter + 1;
         end
     end
 
